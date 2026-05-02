@@ -13,10 +13,11 @@ Estratégias NTSL disponíveis:
 ## `scalp_reversao_alvo.src`
 
 - scalp com ordens stop armadas na máxima ou mínima do candle que acabou de fechar
-- alvo configurável em pontos e quantidade inicial configurável por input
+- alvo configurável em pontos, quantidade inicial configurável por input e teto de quantidade por `MaxQuantidade`
 - sem stop fixo
 - o alvo é mantido como ordem limite enquanto a posição estiver aberta, evitando esperar a próxima vela para encerrar no backtest
 - se a entrada não disparar no candle seguinte, a ordem pendente é cancelada e rearmada usando a máxima ou mínima do último candle fechado
 - se houver posição aberta e fechar um candle na direção oposta, a estratégia fecha a posição a mercado e arma nova entrada stop no extremo desse candle
-- se o fechamento por reversão ocorrer com prejuízo, a próxima entrada usa o dobro da quantidade atual
+- se o fechamento por reversão ocorrer com prejuízo, a próxima entrada usa o dobro da quantidade atual, respeitando `MaxQuantidade`
+- a quantidade é resetada para `QuantidadeInicial` na virada da data
 - ao atingir o primeiro alvo do dia, interrompe novas operações até a virada da data
