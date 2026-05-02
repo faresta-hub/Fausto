@@ -11,12 +11,20 @@ Var
   PrecoAlvo : Float;
   DirecaoOrdem : Integer;
   PosicaoAtual : Integer;
+  PosicaoAtualInicial : Integer;
   PosicaoAnterior : Integer;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
   FechamentoPorReversao : Boolean;
 
 begin
+  PosicaoAtualInicial := 0;
+
+  if IsBought then
+    PosicaoAtualInicial := 1
+  else if IsSold then
+    PosicaoAtualInicial := -1;
+
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
@@ -26,7 +34,7 @@ begin
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
-    PosicaoAnterior := 0;
+    PosicaoAnterior := PosicaoAtualInicial;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
     FechamentoPorReversao := false;
@@ -46,7 +54,7 @@ begin
 
   if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
   begin
-    if (PrecoAlvo > 0) and (not FechamentoPorReversao) then
+    if (PrecoAlvo <> 0) and (not FechamentoPorReversao) then
     begin
       AlvoAtingidoNoDia := true;
       CancelPendingOrders;
@@ -124,7 +132,7 @@ begin
   end
   else
   begin
-    if HasPosition and (PrecoAlvo > 0) then
+    if HasPosition and (PrecoAlvo <> 0) then
     begin
       CancelPendingOrders;
 
