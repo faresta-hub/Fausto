@@ -1,6 +1,6 @@
 # Fausto
 
-Estratégia NTSL adicionada em `/home/runner/work/Fausto/Fausto/estrategia_quatro_medias.src`.
+Estratégia NTSL adicionada em `estrategia_quatro_medias.src`.
 
 Resumo:
 - 4 médias aritméticas configuráveis por input
