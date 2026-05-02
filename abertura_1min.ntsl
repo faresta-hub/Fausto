@@ -80,7 +80,6 @@ Begin
       SellToCoverStop(stopAtual);
       SellToCoverLimit(alvoAtual);
       saidaCompraEnviada := True;
-      saidaVendaEnviada := False;
     end;
   end;
 
@@ -94,7 +93,6 @@ Begin
       BuyToCoverStop(stopAtual);
       BuyToCoverLimit(alvoAtual);
       saidaVendaEnviada := True;
-      saidaCompraEnviada := False;
     end;
   end;
 
