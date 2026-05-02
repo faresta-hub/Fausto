@@ -13,6 +13,7 @@ Var
   PosicaoAtual : Integer;
   PosicaoAtualInicial : Integer;
   PosicaoAnterior : Integer;
+  ResultadoPosicaoAberta : Float;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
   FechamentoPorReversao : Boolean;
@@ -28,13 +29,14 @@ begin
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
-    UltimoCandleProcessado := -1;
+    UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
     QuantidadeAtual := QuantidadeInicial;
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
     PosicaoAnterior := PosicaoAtualInicial;
+    ResultadoPosicaoAberta := 0;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
     FechamentoPorReversao := false;
@@ -85,9 +87,9 @@ begin
       OrdemArmada := false;
     end;
 
-    if (Close > Open) then
+    if (Close[1] > Open[1]) then
       CandleDirecao := 1
-    else if (Close < Open) then
+    else if (Close[1] < Open[1]) then
       CandleDirecao := -1;
 
     if (CandleDirecao <> 0) then
@@ -95,32 +97,42 @@ begin
       if IsBought and (CandleDirecao = -1) then
       begin
         FechamentoPorReversao := true;
+        ResultadoPosicaoAberta := OpenResult;
+
+        if (ResultadoPosicaoAberta < 0) then
+          QuantidadeAtual := QuantidadeAtual * 2;
+
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := -1;
-        NivelDisparo := Low;
+        NivelDisparo := Low[1];
         OrdemArmada := true;
       end
       else if IsSold and (CandleDirecao = 1) then
       begin
         FechamentoPorReversao := true;
+        ResultadoPosicaoAberta := OpenResult;
+
+        if (ResultadoPosicaoAberta < 0) then
+          QuantidadeAtual := QuantidadeAtual * 2;
+
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := 1;
-        NivelDisparo := High;
+        NivelDisparo := High[1];
         OrdemArmada := true;
       end;
 
-      if (PosicaoAtual = 0) then
+      if (PosicaoAtual = 0) and (not OrdemArmada) then
       begin
         DirecaoOrdem := CandleDirecao;
         PrecoAlvo := 0;
         OrdemArmada := true;
 
         if (CandleDirecao = 1) then
-          NivelDisparo := High
+          NivelDisparo := High[1]
         else
-          NivelDisparo := Low;
+          NivelDisparo := Low[1];
       end;
     end;
   end;
