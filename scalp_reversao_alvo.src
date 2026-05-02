@@ -136,9 +136,9 @@ begin
       CancelPendingOrders;
 
       if IsBought then
-        SellLimit(QuantidadeAtual, PrecoAlvo)
+        SellLimit(PrecoAlvo, QuantidadeAtual)
       else if IsSold then
-        BuyToCoverLimit(QuantidadeAtual, PrecoAlvo);
+        BuyToCoverLimit(PrecoAlvo, QuantidadeAtual);
     end
     else if OrdemArmada then
     begin
