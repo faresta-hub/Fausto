@@ -4,7 +4,7 @@ Estratégias NTSL para automação de operações.
 
 ## Arquivos
 
-- `/home/runner/work/Fausto/Fausto/abertura_1min.ntsl`: estratégia para gráfico de 1 minuto focada no primeiro movimento do pregão.
+- `abertura_1min.ntsl`: estratégia para gráfico de 1 minuto focada no primeiro movimento do pregão.
 
 ## Estratégia `abertura_1min.ntsl`
 
