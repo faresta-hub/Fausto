@@ -1,0 +1,149 @@
+Input
+  AlvoPontos(50);
+  QuantidadeInicial(1);
+
+Var
+  DataReferencia : Integer;
+  UltimoCandleProcessado : Integer;
+  CandleDirecao : Integer;
+  QuantidadeAtual : Integer;
+  NivelDisparo : Float;
+  PrecoAlvo : Float;
+  DirecaoOrdem : Integer;
+  OrdemArmada : Boolean;
+  AlvoAtingidoNoDia : Boolean;
+
+begin
+  if (Date <> DataReferencia) then
+  begin
+    DataReferencia := Date;
+    UltimoCandleProcessado := -1;
+    CandleDirecao := 0;
+    QuantidadeAtual := QuantidadeInicial;
+    NivelDisparo := 0;
+    PrecoAlvo := 0;
+    DirecaoOrdem := 0;
+    OrdemArmada := false;
+    AlvoAtingidoNoDia := false;
+
+    CancelPendingOrders;
+
+    if (HasPosition = true) then
+      ClosePosition;
+  end;
+
+  if AlvoAtingidoNoDia then
+  begin
+    CancelPendingOrders;
+    PaintBar(clBlue);
+  end
+  else
+  begin
+    if IsBought then
+    begin
+      if (High >= PrecoAlvo) then
+      begin
+        SellAtMarket(QuantidadeAtual);
+        AlvoAtingidoNoDia := true;
+        OrdemArmada := false;
+        NivelDisparo := 0;
+        PrecoAlvo := 0;
+        PaintBar(clBlue);
+      end
+      else if OrdemArmada and (DirecaoOrdem = -1) and (Low <= NivelDisparo) then
+      begin
+        SellAtMarket(QuantidadeAtual);
+        QuantidadeAtual := QuantidadeAtual * 2;
+        SellShortAtMarket(QuantidadeAtual);
+        PrecoAlvo := NivelDisparo - AlvoPontos;
+        OrdemArmada := false;
+        PaintBar(clRed);
+      end
+      else
+        PaintBar(clGreen);
+    end
+    else if IsSold then
+    begin
+      if (Low <= PrecoAlvo) then
+      begin
+        BuyToCoverAtMarket(QuantidadeAtual);
+        AlvoAtingidoNoDia := true;
+        OrdemArmada := false;
+        NivelDisparo := 0;
+        PrecoAlvo := 0;
+        PaintBar(clBlue);
+      end
+      else if OrdemArmada and (DirecaoOrdem = 1) and (High >= NivelDisparo) then
+      begin
+        BuyToCoverAtMarket(QuantidadeAtual);
+        QuantidadeAtual := QuantidadeAtual * 2;
+        BuyAtMarket(QuantidadeAtual);
+        PrecoAlvo := NivelDisparo + AlvoPontos;
+        OrdemArmada := false;
+        PaintBar(clLime);
+      end
+      else
+        PaintBar(clRed);
+    end
+    else if OrdemArmada then
+    begin
+      if (DirecaoOrdem = 1) and (High >= NivelDisparo) then
+      begin
+        BuyAtMarket(QuantidadeAtual);
+        PrecoAlvo := NivelDisparo + AlvoPontos;
+        OrdemArmada := false;
+        PaintBar(clLime);
+      end
+      else if (DirecaoOrdem = -1) and (Low <= NivelDisparo) then
+      begin
+        SellShortAtMarket(QuantidadeAtual);
+        PrecoAlvo := NivelDisparo - AlvoPontos;
+        OrdemArmada := false;
+        PaintBar(clMaroon);
+      end;
+    end
+    else
+      PaintBar(clSilver);
+
+    if (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
+    begin
+      UltimoCandleProcessado := CurrentBar;
+      CandleDirecao := 0;
+
+      if (Close[1] > Open[1]) then
+        CandleDirecao := 1
+      else if (Close[1] < Open[1]) then
+        CandleDirecao := -1;
+
+      if (HasPosition = false) then
+      begin
+        OrdemArmada := false;
+
+        if (CandleDirecao = 1) then
+        begin
+          DirecaoOrdem := 1;
+          NivelDisparo := High[1];
+          OrdemArmada := true;
+        end
+        else if (CandleDirecao = -1) then
+        begin
+          DirecaoOrdem := -1;
+          NivelDisparo := Low[1];
+          OrdemArmada := true;
+        end;
+      end
+      else if IsBought and (CandleDirecao = -1) then
+      begin
+        DirecaoOrdem := -1;
+        NivelDisparo := Low[1];
+        OrdemArmada := true;
+      end
+      else if IsSold and (CandleDirecao = 1) then
+      begin
+        DirecaoOrdem := 1;
+        NivelDisparo := High[1];
+        OrdemArmada := true;
+      end;
+    end;
+  end;
+end;
