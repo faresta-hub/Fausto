@@ -14,6 +14,7 @@ Var
   PosicaoAnterior : Integer;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
+  FechamentoPorReversao : Boolean;
 
 begin
   PosicaoAtual := 0;
@@ -36,6 +37,7 @@ begin
     PosicaoAnterior := 0;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
+    FechamentoPorReversao := false;
 
     CancelPendingOrders;
 
@@ -43,33 +45,27 @@ begin
       ClosePosition;
   end;
 
+  if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
+  begin
+    if (PrecoAlvo > 0) and (not FechamentoPorReversao) then
+    begin
+      AlvoAtingidoNoDia := true;
+      CancelPendingOrders;
+    end;
+
+    PrecoAlvo := 0;
+    FechamentoPorReversao := false;
+  end;
+
   if OrdemArmada and (PosicaoAnterior = 0) and (PosicaoAtual <> 0) then
   begin
     OrdemArmada := false;
+    FechamentoPorReversao := false;
 
     if IsBought then
       PrecoAlvo := BuyPrice + AlvoPontos
     else if IsSold then
       PrecoAlvo := SellPrice - AlvoPontos;
-  end;
-
-  if IsBought and (PrecoAlvo > 0) and (High >= PrecoAlvo) then
-  begin
-    SellAtMarket(QuantidadeAtual);
-    AlvoAtingidoNoDia := true;
-    OrdemArmada := false;
-    NivelDisparo := 0;
-    PrecoAlvo := 0;
-    CancelPendingOrders;
-  end
-  else if IsSold and (PrecoAlvo > 0) and (Low <= PrecoAlvo) then
-  begin
-    BuyToCoverAtMarket(QuantidadeAtual);
-    AlvoAtingidoNoDia := true;
-    OrdemArmada := false;
-    NivelDisparo := 0;
-    PrecoAlvo := 0;
-    CancelPendingOrders;
   end;
 
   if (not AlvoAtingidoNoDia) and (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
@@ -92,6 +88,7 @@ begin
     begin
       if IsBought and (CandleDirecao = -1) then
       begin
+        FechamentoPorReversao := true;
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := -1;
@@ -100,6 +97,7 @@ begin
       end
       else if IsSold and (CandleDirecao = 1) then
       begin
+        FechamentoPorReversao := true;
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := 1;
@@ -127,7 +125,16 @@ begin
   end
   else
   begin
-    if OrdemArmada then
+    if HasPosition and (PrecoAlvo > 0) then
+    begin
+      CancelPendingOrders;
+
+      if IsBought then
+        SellLimit(QuantidadeAtual, PrecoAlvo)
+      else if IsSold then
+        BuyToCoverLimit(QuantidadeAtual, PrecoAlvo);
+    end
+    else if OrdemArmada then
     begin
       CancelPendingOrders;
 
