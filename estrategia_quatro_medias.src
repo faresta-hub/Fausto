@@ -5,6 +5,8 @@ Input
   PeriodoMediaFechamentoLonga(20);
   HoraInicio(1600);
   HoraFim(1700);
+  HoraInicio2(0);
+  HoraFim2(0);
   Quantidade(1);
   DistanciaStopPontos(100);
 
@@ -27,7 +29,8 @@ begin
   MediaCurta := Media(PeriodoMediaFechamentoCurta, Close);
   MediaLonga := Media(PeriodoMediaFechamentoLonga, Close);
 
-  DentroHorario := (Time >= HoraInicio) and (Time < HoraFim);
+  DentroHorario := ((Time >= HoraInicio) and (Time < HoraFim))
+                   or ((Time >= HoraInicio2) and (Time < HoraFim2));
   TendenciaBaixa := MediaCurta < MediaLonga;
   TendenciaAlta := MediaCurta > MediaLonga;
   SaidaVenda := false;
