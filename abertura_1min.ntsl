@@ -15,6 +15,8 @@ Var
   alvoAtual        : Float;
   operacoesHoje    : Integer;
   dataAnterior     : Integer;
+  saidaCompraEnviada : Boolean;
+  saidaVendaEnviada  : Boolean;
 
 Begin
 
@@ -22,6 +24,12 @@ Begin
   begin
     operacoesHoje := 0;
     dataAnterior := Date;
+  end;
+
+  if (not IsBought) and (not IsSold) then
+  begin
+    saidaCompraEnviada := False;
+    saidaVendaEnviada := False;
   end;
 
   corpoCandle := Abs(Close - Open);
@@ -67,8 +75,13 @@ Begin
     stopAtual := BuyPrice - stopPontos;
     alvoAtual := BuyPrice + alvoPontos;
 
-    SellToCoverStop(stopAtual);
-    SellToCoverLimit(alvoAtual);
+    if not saidaCompraEnviada then
+    begin
+      SellToCoverStop(stopAtual);
+      SellToCoverLimit(alvoAtual);
+      saidaCompraEnviada := True;
+      saidaVendaEnviada := False;
+    end;
   end;
 
   if IsSold then
@@ -76,8 +89,13 @@ Begin
     stopAtual := SellPrice + stopPontos;
     alvoAtual := SellPrice - alvoPontos;
 
-    BuyToCoverStop(stopAtual);
-    BuyToCoverLimit(alvoAtual);
+    if not saidaVendaEnviada then
+    begin
+      BuyToCoverStop(stopAtual);
+      BuyToCoverLimit(alvoAtual);
+      saidaVendaEnviada := True;
+      saidaCompraEnviada := False;
+    end;
   end;
 
 End;
