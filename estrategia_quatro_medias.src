@@ -53,14 +53,14 @@ begin
   else if IsSold then
   begin
     if SaidaVenda then
-      BuyToCoverAtMarket;
+      BuyToCoverAtMarket(Quantidade);
 
     PaintBar(clRed);
   end
   else if IsBought then
   begin
     if SaidaCompra then
-      SellToCoverAtMarket;
+      SellAtMarket(Quantidade);
 
     PaintBar(clGreen);
   end
