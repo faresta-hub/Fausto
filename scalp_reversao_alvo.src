@@ -7,35 +7,22 @@ Var
   UltimoCandleProcessado : Integer;
   CandleDirecao : Integer;
   QuantidadeAtual : Integer;
-  QuantidadeProximaPosicao : Integer;
   NivelDisparo : Float;
   PrecoAlvo : Float;
   DirecaoOrdem : Integer;
-  PosicaoAtual : Integer;
-  PosicaoAnterior : Integer;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
 
 begin
-  PosicaoAtual := 0;
-
-  if IsBought then
-    PosicaoAtual := 1
-  else if IsSold then
-    PosicaoAtual := -1;
-
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
     UltimoCandleProcessado := -1;
     CandleDirecao := 0;
     QuantidadeAtual := QuantidadeInicial;
-    QuantidadeProximaPosicao := QuantidadeInicial;
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
-    PosicaoAtual := 0;
-    PosicaoAnterior := 0;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
 
@@ -45,29 +32,23 @@ begin
       ClosePosition;
   end;
 
-  if (PosicaoAtual <> PosicaoAnterior) then
+  if IsBought and (PrecoAlvo > 0) and (High >= PrecoAlvo) then
   begin
-    if (PosicaoAtual <> 0) then
-    begin
-      QuantidadeAtual := QuantidadeProximaPosicao;
-
-      if (PosicaoAtual = 1) then
-        PrecoAlvo := NivelDisparo + AlvoPontos
-      else
-        PrecoAlvo := NivelDisparo - AlvoPontos;
-
-      OrdemArmada := false;
-    end
-    else if (PosicaoAnterior <> 0) and (AlvoAtingidoNoDia = false) then
-    begin
-      AlvoAtingidoNoDia := true;
-      OrdemArmada := false;
-      NivelDisparo := 0;
-      PrecoAlvo := 0;
-      CancelPendingOrders;
-    end;
-
-    PosicaoAnterior := PosicaoAtual;
+    SellAtMarket(QuantidadeAtual);
+    AlvoAtingidoNoDia := true;
+    OrdemArmada := false;
+    NivelDisparo := 0;
+    PrecoAlvo := 0;
+    CancelPendingOrders;
+  end
+  else if IsSold and (PrecoAlvo > 0) and (Low <= PrecoAlvo) then
+  begin
+    BuyToCoverAtMarket(QuantidadeAtual);
+    AlvoAtingidoNoDia := true;
+    OrdemArmada := false;
+    NivelDisparo := 0;
+    PrecoAlvo := 0;
+    CancelPendingOrders;
   end;
 
   if (AlvoAtingidoNoDia = false) and (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
@@ -75,43 +56,47 @@ begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
 
+    if (HasPosition = false) then
+    begin
+      CancelPendingOrders;
+      OrdemArmada := false;
+    end;
+
     if (Close[1] > Open[1]) then
       CandleDirecao := 1
     else if (Close[1] < Open[1]) then
       CandleDirecao := -1;
 
-    if (PosicaoAtual = 0) then
+    if (CandleDirecao <> 0) then
     begin
-      OrdemArmada := false;
-
-      if (CandleDirecao = 1) then
+      if IsBought and (CandleDirecao = -1) then
       begin
-        DirecaoOrdem := 1;
-        NivelDisparo := High[1];
-        QuantidadeProximaPosicao := QuantidadeAtual;
-        OrdemArmada := true;
-      end
-      else if (CandleDirecao = -1) then
-      begin
+        ClosePosition;
+        PrecoAlvo := 0;
         DirecaoOrdem := -1;
         NivelDisparo := Low[1];
-        QuantidadeProximaPosicao := QuantidadeAtual;
+        OrdemArmada := true;
+      end
+      else if IsSold and (CandleDirecao = 1) then
+      begin
+        ClosePosition;
+        PrecoAlvo := 0;
+        DirecaoOrdem := 1;
+        NivelDisparo := High[1];
         OrdemArmada := true;
       end;
-    end
-    else if (PosicaoAtual = 1) and (CandleDirecao = -1) then
-    begin
-      DirecaoOrdem := -1;
-      NivelDisparo := Low[1];
-      QuantidadeProximaPosicao := QuantidadeAtual * 2;
-      OrdemArmada := true;
-    end
-    else if (PosicaoAtual = -1) and (CandleDirecao = 1) then
-    begin
-      DirecaoOrdem := 1;
-      NivelDisparo := High[1];
-      QuantidadeProximaPosicao := QuantidadeAtual * 2;
-      OrdemArmada := true;
+
+      if (HasPosition = false) then
+      begin
+        DirecaoOrdem := CandleDirecao;
+        PrecoAlvo := 0;
+        OrdemArmada := true;
+
+        if (CandleDirecao = 1) then
+          NivelDisparo := High[1]
+        else
+          NivelDisparo := Low[1];
+      end;
     end;
   end;
 
@@ -121,28 +106,22 @@ begin
   end
   else
   begin
-    CancelPendingOrders;
-
-    if (PosicaoAtual = 1) then
+    if HasPosition and (OrdemArmada = false) then
     begin
-      SellLimit(QuantidadeAtual, PrecoAlvo);
+      if IsBought then
+        PrecoAlvo := BuyPrice + AlvoPontos
+      else if IsSold then
+        PrecoAlvo := SellPrice - AlvoPontos;
+    end;
 
-      if OrdemArmada and (DirecaoOrdem = -1) then
-        SellShortStop(QuantidadeAtual + QuantidadeProximaPosicao, NivelDisparo);
-    end
-    else if (PosicaoAtual = -1) then
+    if OrdemArmada then
     begin
-      BuyToCoverLimit(QuantidadeAtual, PrecoAlvo);
+      CancelPendingOrders;
 
-      if OrdemArmada and (DirecaoOrdem = 1) then
-        BuyStop(QuantidadeAtual + QuantidadeProximaPosicao, NivelDisparo);
-    end
-    else if OrdemArmada then
-    begin
       if (DirecaoOrdem = 1) then
-        BuyStop(QuantidadeProximaPosicao, NivelDisparo)
+        BuyStop(QuantidadeAtual, NivelDisparo)
       else if (DirecaoOrdem = -1) then
-        SellShortStop(QuantidadeProximaPosicao, NivelDisparo);
+        SellShortStop(QuantidadeAtual, NivelDisparo);
     end;
   end;
 end;

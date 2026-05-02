@@ -15,5 +15,6 @@ Estratégias NTSL disponíveis:
 - scalp com ordens stop armadas na máxima ou mínima da vela fechada anterior
 - alvo configurável em pontos e quantidade inicial configurável por input
 - sem stop fixo
-- ao surgir uma vela fechada no sentido oposto, arma reversão no extremo dessa vela com o dobro da quantidade atual
+- se a entrada não disparar, a ordem pendente é cancelada e rearmada usando a máxima ou mínima do candle seguinte
+- se houver posição aberta e fechar um candle na direção oposta, a estratégia fecha a posição a mercado e arma nova entrada stop no extremo desse candle
 - ao atingir o primeiro alvo do dia, interrompe novas operações até a virada da data
