@@ -35,7 +35,7 @@ begin
     CandleDirecao := 0;
     
     if (QuantidadeInicial > MaxQuantidade) then
-      QuantidadeAtual := MaxQuantidade;
+      QuantidadeAtual := MaxQuantidade
     else
       QuantidadeAtual := QuantidadeInicial;
     NivelDisparo := 0;
