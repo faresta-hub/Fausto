@@ -40,7 +40,7 @@ begin
   begin
     CancelPendingOrders;
 
-    if HasPosition then
+    if (HasPosition = true) then
       ClosePosition;
 
     PaintBar(clSilver);
