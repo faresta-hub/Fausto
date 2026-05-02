@@ -39,7 +39,7 @@ begin
 
     CancelPendingOrders;
 
-    if (HasPosition = true) then
+    if HasPosition then
       ClosePosition;
   end;
 
@@ -77,7 +77,7 @@ begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
 
-    if (HasPosition = false) then
+    if not HasPosition then
     begin
       CancelPendingOrders;
       OrdemArmada := false;
