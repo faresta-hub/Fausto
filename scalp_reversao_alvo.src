@@ -72,7 +72,7 @@ begin
     CancelPendingOrders;
   end;
 
-  if (AlvoAtingidoNoDia = false) and (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
+  if (not AlvoAtingidoNoDia) and (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
   begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
