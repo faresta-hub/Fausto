@@ -127,14 +127,6 @@ begin
   end
   else
   begin
-    if (PosicaoAtual <> 0) and (OrdemArmada = false) then
-    begin
-      if IsBought then
-        PrecoAlvo := BuyPrice + AlvoPontos
-      else if IsSold then
-        PrecoAlvo := SellPrice - AlvoPontos;
-    end;
-
     if OrdemArmada then
     begin
       CancelPendingOrders;
