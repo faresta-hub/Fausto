@@ -67,7 +67,6 @@ begin
   if OrdemArmada and (PosicaoAnterior = 0) and (PosicaoAtual <> 0) then
   begin
     OrdemArmada := false;
-    FechamentoPorReversao := false;
 
     if IsBought then
       PrecoAlvo := BuyPrice + AlvoPontos
