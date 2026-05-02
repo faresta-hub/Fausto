@@ -12,7 +12,7 @@ Estratégias NTSL disponíveis:
 
 ## `scalp_reversao_alvo.src`
 
-- scalp por rompimento da máxima ou mínima da vela fechada anterior
+- scalp com ordens stop armadas na máxima ou mínima da vela fechada anterior
 - alvo configurável em pontos e quantidade inicial configurável por input
 - sem stop fixo
 - ao surgir uma vela fechada no sentido oposto, arma reversão no extremo dessa vela com o dobro da quantidade atual
