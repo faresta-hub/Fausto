@@ -24,7 +24,7 @@ begin
   MediaCurta := Media(PeriodoMediaFechamentoCurta, Close);
   MediaLonga := Media(PeriodoMediaFechamentoLonga, Close);
 
-  DentroHorario := (Time >= HoraInicio) and (Time <= HoraFim);
+  DentroHorario := (Time >= HoraInicio) and (Time < HoraFim);
   TendenciaBaixa := MediaCurta < MediaLonga;
   TendenciaAlta := MediaCurta > MediaLonga;
 
