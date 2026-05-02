@@ -1,0 +1,83 @@
+Input
+  horarioInicio(900);
+  horarioFimEntradas(930);
+  alvoPontos(100);
+  stopPontos(100);
+  numeroOperacoesDia(1);
+
+Var
+  candleCompra     : Boolean;
+  candleVenda      : Boolean;
+  corpoCandle      : Float;
+  pavioSuperior    : Float;
+  pavioInferior    : Float;
+  stopAtual        : Float;
+  alvoAtual        : Float;
+  operacoesHoje    : Integer;
+  dataAnterior     : Integer;
+
+Begin
+
+  if Date <> dataAnterior then
+  begin
+    operacoesHoje := 0;
+    dataAnterior := Date;
+  end;
+
+  corpoCandle := Abs(Close - Open);
+  pavioSuperior := High - Max(Open, Close);
+  pavioInferior := Min(Open, Close) - Low;
+
+  candleCompra :=
+    (Time >= horarioInicio) and
+    (Time <= horarioFimEntradas) and
+    (Close > Open) and
+    (corpoCandle > pavioSuperior) and
+    (corpoCandle > pavioInferior);
+
+  candleVenda :=
+    (Time >= horarioInicio) and
+    (Time <= horarioFimEntradas) and
+    (Close < Open) and
+    (corpoCandle > pavioSuperior) and
+    (corpoCandle > pavioInferior);
+
+  if candleCompra then
+    PaintBar(clLime);
+
+  if candleVenda then
+    PaintBar(clRed);
+
+  if (not IsBought) and (not IsSold) and (operacoesHoje < numeroOperacoesDia) then
+  begin
+    if candleCompra then
+    begin
+      BuyAtMarket;
+      operacoesHoje := operacoesHoje + 1;
+    end
+    else if candleVenda then
+    begin
+      SellShortAtMarket;
+      operacoesHoje := operacoesHoje + 1;
+    end;
+  end;
+
+  if IsBought then
+  begin
+    stopAtual := BuyPrice - stopPontos;
+    alvoAtual := BuyPrice + alvoPontos;
+
+    SellToCoverStop(stopAtual);
+    SellToCoverLimit(alvoAtual);
+  end;
+
+  if IsSold then
+  begin
+    stopAtual := SellPrice + stopPontos;
+    alvoAtual := SellPrice - alvoPontos;
+
+    BuyToCoverStop(stopAtual);
+    BuyToCoverLimit(alvoAtual);
+  end;
+
+End;
