@@ -15,6 +15,7 @@ Var
   PosicaoAtualInicial : Integer;
   PosicaoAnterior : Integer;
   ResultadoPosicaoAberta : Float;
+  ReverteuNesteCandle : Boolean;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
   FechamentoPorReversao : Boolean;
@@ -32,15 +33,17 @@ begin
     DataReferencia := Date;
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
-    QuantidadeAtual := QuantidadeInicial;
-
-    if (QuantidadeAtual > MaxQuantidade) then
+    
+    if (QuantidadeInicial > MaxQuantidade) then
       QuantidadeAtual := MaxQuantidade;
+    else
+      QuantidadeAtual := QuantidadeInicial;
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
     PosicaoAnterior := PosicaoAtualInicial;
     ResultadoPosicaoAberta := 0;
+    ReverteuNesteCandle := false;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
     FechamentoPorReversao := false;
@@ -84,6 +87,7 @@ begin
   begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
+    ReverteuNesteCandle := false;
 
     if not HasPosition then
     begin
@@ -102,15 +106,7 @@ begin
       begin
         FechamentoPorReversao := true;
         ResultadoPosicaoAberta := OpenResult;
-
-        if (ResultadoPosicaoAberta < 0) then
-        begin
-          QuantidadeAtual := QuantidadeAtual * 2;
-
-          if (QuantidadeAtual > MaxQuantidade) then
-            QuantidadeAtual := MaxQuantidade;
-        end;
-
+        ReverteuNesteCandle := true;
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := -1;
@@ -121,20 +117,20 @@ begin
       begin
         FechamentoPorReversao := true;
         ResultadoPosicaoAberta := OpenResult;
-
-        if (ResultadoPosicaoAberta < 0) then
-        begin
-          QuantidadeAtual := QuantidadeAtual * 2;
-
-          if (QuantidadeAtual > MaxQuantidade) then
-            QuantidadeAtual := MaxQuantidade;
-        end;
-
+        ReverteuNesteCandle := true;
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := 1;
         NivelDisparo := High[1];
         OrdemArmada := true;
+      end;
+
+      if ReverteuNesteCandle and (ResultadoPosicaoAberta < 0) then
+      begin
+        if (QuantidadeAtual > (MaxQuantidade / 2)) then
+          QuantidadeAtual := MaxQuantidade
+        else
+          QuantidadeAtual := QuantidadeAtual * 2;
       end;
 
       if (PosicaoAtual = 0) and (not OrdemArmada) then
