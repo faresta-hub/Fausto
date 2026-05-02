@@ -1,0 +1,75 @@
+Input
+  PeriodoMediaMaximas(7);
+  PeriodoMediaMinimas(7);
+  PeriodoMediaFechamentoCurta(10);
+  PeriodoMediaFechamentoLonga(20);
+  HoraInicio(1600);
+  HoraFim(1700);
+  Quantidade(1);
+
+Var
+  MediaMaximas : Float;
+  MediaMinimas : Float;
+  MediaCurta : Float;
+  MediaLonga : Float;
+  DentroHorario : Boolean;
+  TendenciaBaixa : Boolean;
+  TendenciaAlta : Boolean;
+  SaidaVenda : Boolean;
+  SaidaCompra : Boolean;
+
+begin
+  MediaMaximas := Media(PeriodoMediaMaximas, High);
+  MediaMinimas := Media(PeriodoMediaMinimas, Low);
+  MediaCurta := Media(PeriodoMediaFechamentoCurta, Close);
+  MediaLonga := Media(PeriodoMediaFechamentoLonga, Close);
+
+  DentroHorario := (Time >= HoraInicio) and (Time <= HoraFim);
+  TendenciaBaixa := MediaCurta < MediaLonga;
+  TendenciaAlta := MediaCurta > MediaLonga;
+
+  SaidaVenda := Low <= MediaMinimas;
+  SaidaCompra := High >= MediaMaximas;
+
+  Plot(MediaMaximas);
+  Plot2(MediaMinimas);
+  Plot3(MediaCurta);
+  Plot4(MediaLonga);
+
+  if (DentroHorario = false) then
+  begin
+    CancelPendingOrders;
+
+    if HasPosition then
+      ClosePosition;
+
+    PaintBar(clSilver);
+  end
+  else if IsSold then
+  begin
+    if SaidaVenda then
+      BuyToCoverAtMarket;
+
+    PaintBar(clRed);
+  end
+  else if IsBought then
+  begin
+    if SaidaCompra then
+      SellToCoverAtMarket;
+
+    PaintBar(clGreen);
+  end
+  else
+  begin
+    if TendenciaBaixa and (Close > MediaMaximas) then
+    begin
+      SellShortAtMarket(Quantidade);
+      PaintBar(clMaroon);
+    end
+    else if TendenciaAlta and (Close < MediaMinimas) then
+    begin
+      BuyAtMarket(Quantidade);
+      PaintBar(clLime);
+    end;
+  end;
+end;
