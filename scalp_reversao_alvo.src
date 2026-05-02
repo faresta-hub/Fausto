@@ -17,8 +17,6 @@ Var
   FechamentoPorReversao : Boolean;
 
 begin
-  PosicaoAtual := 0;
-
   if IsBought then
     PosicaoAtual := 1
   else if IsSold then
