@@ -6,7 +6,7 @@ Input
   HoraInicio(1600);
   HoraFim(1700);
   Quantidade(1);
-  DistanciaStop(100);
+  DistanciaStopPontos(100);
 
 Var
   MediaMaximas : Float;
@@ -30,11 +30,8 @@ begin
   DentroHorario := (Time >= HoraInicio) and (Time < HoraFim);
   TendenciaBaixa := MediaCurta < MediaLonga;
   TendenciaAlta := MediaCurta > MediaLonga;
-  StopVenda := SellPrice + DistanciaStop;
-  StopCompra := BuyPrice - DistanciaStop;
-
-  SaidaVenda := (Low <= MediaMinimas) or (High >= StopVenda);
-  SaidaCompra := (High >= MediaMaximas) or (Low <= StopCompra);
+  SaidaVenda := false;
+  SaidaCompra := false;
 
   Plot(MediaMaximas);
   Plot2(MediaMinimas);
@@ -52,6 +49,9 @@ begin
   end
   else if IsSold then
   begin
+    StopVenda := SellPrice + DistanciaStopPontos;
+    SaidaVenda := (Low <= MediaMinimas) or (High >= StopVenda);
+
     if SaidaVenda then
       BuyToCoverAtMarket(Quantidade);
 
@@ -59,6 +59,9 @@ begin
   end
   else if IsBought then
   begin
+    StopCompra := BuyPrice - DistanciaStopPontos;
+    SaidaCompra := (High >= MediaMaximas) or (Low <= StopCompra);
+
     if SaidaCompra then
       SellAtMarket(Quantidade);
 
