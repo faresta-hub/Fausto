@@ -6,12 +6,15 @@ Input
   HoraInicio(1600);
   HoraFim(1700);
   Quantidade(1);
+  DistanciaStop(100);
 
 Var
   MediaMaximas : Float;
   MediaMinimas : Float;
   MediaCurta : Float;
   MediaLonga : Float;
+  StopVenda : Float;
+  StopCompra : Float;
   DentroHorario : Boolean;
   TendenciaBaixa : Boolean;
   TendenciaAlta : Boolean;
@@ -27,9 +30,11 @@ begin
   DentroHorario := (Time >= HoraInicio) and (Time < HoraFim);
   TendenciaBaixa := MediaCurta < MediaLonga;
   TendenciaAlta := MediaCurta > MediaLonga;
+  StopVenda := SellPrice + DistanciaStop;
+  StopCompra := BuyPrice - DistanciaStop;
 
-  SaidaVenda := Low <= MediaMinimas;
-  SaidaCompra := High >= MediaMaximas;
+  SaidaVenda := (Low <= MediaMinimas) or (High >= StopVenda);
+  SaidaCompra := (High >= MediaMaximas) or (Low <= StopCompra);
 
   Plot(MediaMaximas);
   Plot2(MediaMinimas);
