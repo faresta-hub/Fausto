@@ -12,7 +12,7 @@ Estratégias NTSL disponíveis:
 
 ## `scalp_reversao_alvo.src`
 
-- scalp com ordens stop armadas na máxima ou mínima da vela fechada anterior
+- scalp com ordens stop armadas na máxima ou mínima do candle que acabou de fechar
 - alvo configurável em pontos e quantidade inicial configurável por input
 - sem stop fixo
 - o alvo é mantido como ordem limite enquanto a posição estiver aberta, evitando esperar a próxima vela para encerrar no backtest
