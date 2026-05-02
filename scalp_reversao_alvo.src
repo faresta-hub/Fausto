@@ -132,9 +132,9 @@ begin
       CancelPendingOrders;
 
       if (DirecaoOrdem = 1) then
-        BuyStop(QuantidadeAtual, NivelDisparo)
+        BuyStop(NivelDisparo, QuantidadeAtual)
       else if (DirecaoOrdem = -1) then
-        SellShortStop(QuantidadeAtual, NivelDisparo);
+        SellShortStop(NivelDisparo, QuantidadeAtual);
     end;
   end;
 
