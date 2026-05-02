@@ -10,10 +10,19 @@ Var
   NivelDisparo : Float;
   PrecoAlvo : Float;
   DirecaoOrdem : Integer;
+  PosicaoAtual : Integer;
+  PosicaoAnterior : Integer;
   OrdemArmada : Boolean;
   AlvoAtingidoNoDia : Boolean;
 
 begin
+  PosicaoAtual := 0;
+
+  if IsBought then
+    PosicaoAtual := 1
+  else if IsSold then
+    PosicaoAtual := -1;
+
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
@@ -23,6 +32,8 @@ begin
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
+    PosicaoAtual := 0;
+    PosicaoAnterior := 0;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
 
@@ -30,6 +41,16 @@ begin
 
     if (HasPosition = true) then
       ClosePosition;
+  end;
+
+  if OrdemArmada and (PosicaoAnterior = 0) and (PosicaoAtual <> 0) then
+  begin
+    OrdemArmada := false;
+
+    if IsBought then
+      PrecoAlvo := BuyPrice + AlvoPontos
+    else if IsSold then
+      PrecoAlvo := SellPrice - AlvoPontos;
   end;
 
   if IsBought and (PrecoAlvo > 0) and (High >= PrecoAlvo) then
@@ -86,7 +107,7 @@ begin
         OrdemArmada := true;
       end;
 
-      if (HasPosition = false) then
+      if (PosicaoAtual = 0) then
       begin
         DirecaoOrdem := CandleDirecao;
         PrecoAlvo := 0;
@@ -106,7 +127,7 @@ begin
   end
   else
   begin
-    if HasPosition and (OrdemArmada = false) then
+    if (PosicaoAtual <> 0) and (OrdemArmada = false) then
     begin
       if IsBought then
         PrecoAlvo := BuyPrice + AlvoPontos
@@ -124,4 +145,6 @@ begin
         SellShortStop(QuantidadeAtual, NivelDisparo);
     end;
   end;
+
+  PosicaoAnterior := PosicaoAtual;
 end;
