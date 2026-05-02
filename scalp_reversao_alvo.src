@@ -17,11 +17,6 @@ Var
   FechamentoPorReversao : Boolean;
 
 begin
-  if IsBought then
-    PosicaoAtual := 1
-  else if IsSold then
-    PosicaoAtual := -1;
-
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
@@ -31,7 +26,6 @@ begin
     NivelDisparo := 0;
     PrecoAlvo := 0;
     DirecaoOrdem := 0;
-    PosicaoAtual := 0;
     PosicaoAnterior := 0;
     OrdemArmada := false;
     AlvoAtingidoNoDia := false;
@@ -42,6 +36,13 @@ begin
     if HasPosition then
       ClosePosition;
   end;
+
+  PosicaoAtual := 0;
+
+  if IsBought then
+    PosicaoAtual := 1
+  else if IsSold then
+    PosicaoAtual := -1;
 
   if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
   begin
