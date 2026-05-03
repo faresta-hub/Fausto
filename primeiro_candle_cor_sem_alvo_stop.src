@@ -1,0 +1,60 @@
+// primeiro_candle_cor_sem_alvo_stop.src
+// Versao sem alvo e stop: apenas entrada por ordem stop na extremidade do primeiro candle.
+// Candle de alta  -> BuyStop na maxima.
+// Candle de baixa -> SellShortStop na minima.
+
+Input
+  Quantidade(1);
+
+Var
+  // Posicionais: sempre no topo, nunca em escopos condicionais
+  cOpen  : Float;
+  cClose : Float;
+  cHigh  : Float;
+  cLow   : Float;
+
+  diaRef  : Integer;
+  dirDia  : Integer;   // 0=aguardando  1=compra  -1=venda
+  nivStop : Float;
+
+begin
+  cOpen  := Open;
+  cClose := Close;
+  cHigh  := High;
+  cLow   := Low;
+
+  // Reset diario e deteccao do primeiro candle
+  if Date <> diaRef then
+  begin
+    diaRef  := Date;
+    dirDia  := 0;
+    nivStop := 0;
+    CancelPendingOrders;
+
+    if cClose > cOpen then
+    begin
+      PaintBar(clGreen);
+      dirDia  := 1;
+      nivStop := cHigh;
+    end
+    else if cClose < cOpen then
+    begin
+      PaintBar(clRed);
+      dirDia  := -1;
+      nivStop := cLow;
+    end;
+  end;
+
+  // Gestao de ordens: cancel + resubmit a cada tick (padrao NTSL)
+  if dirDia = 1 then
+  begin
+    CancelPendingOrders;
+    BuyStop(nivStop, Quantidade);
+  end
+  else if dirDia = -1 then
+  begin
+    CancelPendingOrders;
+    SellShortStop(nivStop, Quantidade);
+  end;
+
+end;
