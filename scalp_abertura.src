@@ -1,160 +1,141 @@
+// Estrategia: entrada unica no primeiro candle do dia.
+// Primeiro candle positivo -> BuyStop na maxima.
+// Primeiro candle negativo -> SellShortStop na minima.
+// Saida pelo alvo ou no fechamento do primeiro candle de direcao oposta.
+//
+// Cada ordem e colocada UMA UNICA VEZ por dia (flags stopOk/alvoOk)
+// para evitar acumulo de ordens multiplas por tick.
+
 Input
   AlvoPontos(50);
   Quantidade(1);
   HoraInicio(900);
 
 Var
-  // Leituras posicionais: capturadas aqui, NUNCA dentro de condicionais
+  // Leituras posicionais: sempre no topo, nunca dentro de condicionais
   cOpen  : Float;
   cClose : Float;
   cHigh  : Float;
   cLow   : Float;
   cTime  : Integer;
 
-  // Controle de dia e barra
-  diaRef  : Integer;
-  barProc : Integer;
+  // Controle diario
+  diaRef       : Integer;
+  dirDia       : Integer;   // 0=aguardando 1=compra -1=venda 999=encerrado
+  nivStop      : Float;
+  nivAlvo      : Float;
 
-  // Posicao anterior e atual (1=comprado, -1=vendido, 0=flat)
-  posAtual : Integer;
-  posAnt   : Integer;
+  // Flags de ordem: cada ordem colocada no maximo uma vez por dia
+  stopOk       : Boolean;
+  alvoOk       : Boolean;
+  diaEncerrado : Boolean;
 
-  // Dados do trade
-  dirEntrada : Integer;
-  nivStop    : Float;
-  nivAlvo    : Float;
-
-  // Maquina de estados:
-  //   aguardando : esperando o primeiro candle fechar
-  //   stopArmado : stop de entrada colocado, aguardando acionamento
-  //   naPos      : em posicao, ordem de alvo ativa
-  //   fechando   : ClosePosition chamado por candle contrario; aguarda flat
-  //   encerrado  : dia encerrado
-  aguardando : Boolean;
-  stopArmado : Boolean;
-  naPos      : Boolean;
-  fechando   : Boolean;
-  encerrado  : Boolean;
+  // Controle de posicao para detectar fechamento
+  barEntrada   : Integer;
+  estavaNaPos  : Boolean;
 
 begin
-  // --- Captura posicional obrigatoria antes de qualquer condicional ---
+  // --- Captura posicional obrigatoria no topo ---
   cOpen  := Open[1];
   cClose := Close[1];
   cHigh  := High[1];
   cLow   := Low[1];
   cTime  := Time[1];
 
-  // --- Reset no inicio de cada novo dia ---
+  // --- Reset diario ---
   if Date <> diaRef then
   begin
-    diaRef     := Date;
-    barProc    := CurrentBar;
-    dirEntrada := 0;
-    nivStop    := 0;
-    nivAlvo    := 0;
-    aguardando := true;
-    stopArmado := false;
-    naPos      := false;
-    fechando   := false;
-    encerrado  := false;
-    posAnt     := 0;
+    diaRef       := Date;
+    dirDia       := 0;
+    nivStop      := 0;
+    nivAlvo      := 0;
+    stopOk       := false;
+    alvoOk       := false;
+    diaEncerrado := false;
+    barEntrada   := 0;
+    estavaNaPos  := false;
     CancelPendingOrders;
     if HasPosition then
       ClosePosition;
   end;
 
-  // --- Posicao neste tick ---
-  posAtual := 0;
-  if IsBought then
-    posAtual := 1
-  else if IsSold then
-    posAtual := -1;
+  // --- Detectar trade encerrado (estava em posicao e agora esta flat) ---
+  if estavaNaPos and (not HasPosition) then
+    diaEncerrado := true;
 
-  // --- Transicao flat -> posicionado (stop de entrada acionado) ---
-  if stopArmado and (posAnt = 0) and (posAtual <> 0) then
+  if HasPosition then
   begin
-    stopArmado := false;
-    naPos      := true;
-    dirEntrada := posAtual;
-    if posAtual = 1 then
-      nivAlvo := BuyPrice + AlvoPontos
+    estavaNaPos := true;
+    if barEntrada = 0 then
+      barEntrada := CurrentBar;
+  end;
+
+  // --- Determinar direcao pelo primeiro candle (executa uma vez) ---
+  if (dirDia = 0) and (cTime = HoraInicio) then
+  begin
+    if cClose > cOpen then
+    begin
+      dirDia  := 1;
+      nivStop := cHigh;
+    end
+    else if cClose < cOpen then
+    begin
+      dirDia  := -1;
+      nivStop := cLow;
+    end
     else
-      nivAlvo := SellPrice - AlvoPontos;
+      diaEncerrado := true;
   end;
 
-  // --- Transicao posicionado -> flat (alvo ou candle contrario) ---
-  if (naPos or fechando) and (posAnt <> 0) and (posAtual = 0) then
+  // --- Saida por candle de direcao oposta ---
+  // Verifica somente em barras apos a entrada para evitar falso gatilho
+  // causado pelo candle anterior ao acionamento do stop
+  if (not diaEncerrado) and (barEntrada > 0) and (CurrentBar > barEntrada) then
   begin
-    naPos      := false;
-    fechando   := false;
-    nivAlvo    := 0;
-    encerrado  := true;
-  end;
-
-  // --- Processamento do candle fechado ---
-  if (CurrentBar > 1) and (CurrentBar <> barProc) then
-  begin
-    barProc := CurrentBar;
-
-    // Primeiro candle do dia: armar stop de entrada
-    if aguardando and (cTime >= HoraInicio) then
+    if IsBought and (cClose < cOpen) then
     begin
-      aguardando := false;
-      if cClose > cOpen then
-      begin
-        dirEntrada := 1;
-        nivStop    := cHigh;
-        stopArmado := true;
-      end
-      else if cClose < cOpen then
-      begin
-        dirEntrada := -1;
-        nivStop    := cLow;
-        stopArmado := true;
-      end
-      else
-        encerrado := true;
+      CancelPendingOrders;
+      ClosePosition;
+      diaEncerrado := true;
     end;
-
-    // Em posicao: verificar candle de direcao oposta
-    if naPos and (not fechando) then
+    if IsSold and (cClose > cOpen) then
     begin
-      if (dirEntrada = 1) and (cClose < cOpen) then
-      begin
-        CancelPendingOrders;
-        ClosePosition;
-        fechando := true;
-        naPos    := false;
-      end
-      else if (dirEntrada = -1) and (cClose > cOpen) then
-      begin
-        CancelPendingOrders;
-        ClosePosition;
-        fechando := true;
-        naPos    := false;
-      end;
+      CancelPendingOrders;
+      ClosePosition;
+      diaEncerrado := true;
     end;
   end;
 
-  // --- Gestao de ordens a cada tick ---
-  if encerrado or fechando then
-    CancelPendingOrders
-  else if naPos and (nivAlvo <> 0) then
+  // --- Colocar stop de entrada UMA UNICA VEZ ---
+  if (not diaEncerrado) and (not stopOk) and (not HasPosition) then
   begin
-    CancelPendingOrders;
-    if dirEntrada = 1 then
-      SellShortLimit(nivAlvo, Quantidade)
-    else
-      BuyToCoverLimit(nivAlvo, Quantidade);
-  end
-  else if stopArmado then
-  begin
-    CancelPendingOrders;
-    if dirEntrada = 1 then
-      BuyStop(nivStop, Quantidade)
-    else
+    if dirDia = 1 then
+    begin
+      BuyStop(nivStop, Quantidade);
+      stopOk := true;
+    end
+    else if dirDia = -1 then
+    begin
       SellShortStop(nivStop, Quantidade);
+      stopOk := true;
+    end;
   end;
 
-  posAnt := posAtual;
+  // --- Colocar alvo UMA UNICA VEZ quando em posicao ---
+  if (not diaEncerrado) and (not alvoOk) then
+  begin
+    if IsBought and (BuyPrice > 0) then
+    begin
+      nivAlvo := BuyPrice + AlvoPontos;
+      SellShortLimit(nivAlvo, Quantidade);
+      alvoOk := true;
+    end
+    else if IsSold and (SellPrice > 0) then
+    begin
+      nivAlvo := SellPrice - AlvoPontos;
+      BuyToCoverLimit(nivAlvo, Quantidade);
+      alvoOk := true;
+    end;
+  end;
+
 end;
