@@ -1,9 +1,7 @@
 Input
   AlvoPontos(50);
-  QuantidadeInicial(1);
-  MaxViradas(3);
+  Quantidade(1);
   HoraInicio(900);
-  HoraFimSinais(930);
 
 Var
   // Leituras posicionais: capturadas aqui, NUNCA dentro de condicionais
@@ -17,27 +15,25 @@ Var
   diaRef  : Integer;
   barProc : Integer;
 
-  // Posicao anterior e atual (inteiro: 1=comprado, -1=vendido, 0=flat)
+  // Posicao anterior e atual (1=comprado, -1=vendido, 0=flat)
   posAtual : Integer;
   posAnt   : Integer;
 
-  // Parametros do trade em andamento
-  qtd     : Integer;
-  viradas : Integer;
-  dir     : Integer;
-  nivStop : Float;
-  nivAlvo : Float;
+  // Dados do trade
+  dirEntrada : Integer;
+  nivStop    : Float;
+  nivAlvo    : Float;
 
-  // Maquina de estados (apenas um ativo por vez):
-  //   ordemPosta  : stop de entrada colocado, aguardando acionamento
-  //   naPos       : posicao aberta, ordem de alvo ativa
-  //   revertendo  : ClosePosition chamado para reversao; aguarda fechamento para armar novo stop
-  //   encerrando  : ClosePosition chamado por limite de viradas; aguarda fechamento para encerrar
-  //   encerrado   : dia encerrado, nenhuma ordem mais
-  ordemPosta : Boolean;
+  // Maquina de estados:
+  //   aguardando : esperando o primeiro candle fechar
+  //   stopArmado : stop de entrada colocado, aguardando acionamento
+  //   naPos      : em posicao, ordem de alvo ativa
+  //   fechando   : ClosePosition chamado por candle contrario; aguarda flat
+  //   encerrado  : dia encerrado
+  aguardando : Boolean;
+  stopArmado : Boolean;
   naPos      : Boolean;
-  revertendo : Boolean;
-  encerrando : Boolean;
+  fechando   : Boolean;
   encerrado  : Boolean;
 
 begin
@@ -53,15 +49,13 @@ begin
   begin
     diaRef     := Date;
     barProc    := CurrentBar;
-    qtd        := QuantidadeInicial;
-    viradas    := 0;
-    dir        := 0;
+    dirEntrada := 0;
     nivStop    := 0;
     nivAlvo    := 0;
-    ordemPosta := false;
+    aguardando := true;
+    stopArmado := false;
     naPos      := false;
-    revertendo := false;
-    encerrando := false;
+    fechando   := false;
     encerrado  := false;
     posAnt     := 0;
     CancelPendingOrders;
@@ -77,130 +71,89 @@ begin
     posAtual := -1;
 
   // --- Transicao flat -> posicionado (stop de entrada acionado) ---
-  if ordemPosta and (posAnt = 0) and (posAtual <> 0) then
+  if stopArmado and (posAnt = 0) and (posAtual <> 0) then
   begin
-    ordemPosta := false;
+    stopArmado := false;
     naPos      := true;
-    dir        := posAtual;
+    dirEntrada := posAtual;
     if posAtual = 1 then
       nivAlvo := BuyPrice + AlvoPontos
     else
       nivAlvo := SellPrice - AlvoPontos;
   end;
 
-  // --- Transicao posicionado -> flat ---
-  if naPos and (posAnt <> 0) and (posAtual = 0) then
+  // --- Transicao posicionado -> flat (alvo ou candle contrario) ---
+  if (naPos or fechando) and (posAnt <> 0) and (posAtual = 0) then
   begin
-    naPos   := false;
-    nivAlvo := 0;
-    if revertendo then
-    begin
-      // Fechou para reversao: arma novo stop
-      revertendo := false;
-      ordemPosta := true;
-    end
-    else if encerrando then
-    begin
-      // Fechou por limite de viradas: encerra o dia
-      encerrando := false;
-      encerrado  := true;
-    end
-    else
-    begin
-      // Fechou pelo alvo: encerra o dia
-      encerrado := true;
-    end;
+    naPos      := false;
+    fechando   := false;
+    nivAlvo    := 0;
+    encerrado  := true;
   end;
 
   // --- Processamento do candle fechado ---
-  if (CurrentBar > 1) and (CurrentBar <> barProc) and (cTime >= HoraInicio) then
+  if (CurrentBar > 1) and (CurrentBar <> barProc) then
   begin
     barProc := CurrentBar;
 
-    // Se flat e sem transicao pendente: cancela ordem anterior nao acionada
-    if (not naPos) and (not revertendo) and (not encerrando) then
+    // Primeiro candle do dia: armar stop de entrada
+    if aguardando and (cTime >= HoraInicio) then
     begin
-      if ordemPosta then
-      begin
-        CancelPendingOrders;
-        ordemPosta := false;
-      end;
-    end;
-
-    // Reversao: em posicao ativa, sem fechamento em andamento
-    if naPos and (not revertendo) and (not encerrando) then
-    begin
-      if (dir = 1) and (cClose < cOpen) then
-      begin
-        // Comprado + candle baixista: reverter para vendido
-        CancelPendingOrders;
-        ClosePosition;
-        if viradas < MaxViradas then
-        begin
-          viradas    := viradas + 1;
-          qtd        := qtd * 2;
-          dir        := -1;
-          nivStop    := cLow;
-          revertendo := true;
-        end
-        else
-          encerrando := true;
-      end
-      else if (dir = -1) and (cClose > cOpen) then
-      begin
-        // Vendido + candle altista: reverter para comprado
-        CancelPendingOrders;
-        ClosePosition;
-        if viradas < MaxViradas then
-        begin
-          viradas    := viradas + 1;
-          qtd        := qtd * 2;
-          dir        := 1;
-          nivStop    := cHigh;
-          revertendo := true;
-        end
-        else
-          encerrando := true;
-      end;
-    end;
-
-    // Novo sinal de entrada inicial
-    if (not naPos) and (not ordemPosta) and (not revertendo) and
-       (not encerrado) and (not encerrando) and (cTime < HoraFimSinais) then
-    begin
+      aguardando := false;
       if cClose > cOpen then
       begin
-        dir        := 1;
+        dirEntrada := 1;
         nivStop    := cHigh;
-        ordemPosta := true;
+        stopArmado := true;
       end
       else if cClose < cOpen then
       begin
-        dir        := -1;
+        dirEntrada := -1;
         nivStop    := cLow;
-        ordemPosta := true;
+        stopArmado := true;
+      end
+      else
+        encerrado := true;
+    end;
+
+    // Em posicao: verificar candle de direcao oposta
+    if naPos and (not fechando) then
+    begin
+      if (dirEntrada = 1) and (cClose < cOpen) then
+      begin
+        CancelPendingOrders;
+        ClosePosition;
+        fechando := true;
+        naPos    := false;
+      end
+      else if (dirEntrada = -1) and (cClose > cOpen) then
+      begin
+        CancelPendingOrders;
+        ClosePosition;
+        fechando := true;
+        naPos    := false;
       end;
     end;
   end;
 
   // --- Gestao de ordens a cada tick ---
-  if encerrado or encerrando or revertendo then
+  if encerrado or fechando then
     CancelPendingOrders
   else if naPos and (nivAlvo <> 0) then
   begin
     CancelPendingOrders;
-    if dir = 1 then
-      SellShortLimit(nivAlvo, qtd)
+    if dirEntrada = 1 then
+      SellShortLimit(nivAlvo, Quantidade)
     else
-      BuyToCoverLimit(nivAlvo, qtd);
+      BuyToCoverLimit(nivAlvo, Quantidade);
   end
-  else if ordemPosta then
+  else if stopArmado then
   begin
     CancelPendingOrders;
-    if dir = 1 then
-      BuyStop(nivStop, qtd)
+    if dirEntrada = 1 then
+      BuyStop(nivStop, Quantidade)
     else
-      SellShortStop(nivStop, qtd);
+      SellShortStop(nivStop, Quantidade);
   end;
 
   posAnt := posAtual;
