@@ -17,7 +17,6 @@ Var
   ResultadoPosicaoAberta : Float;
   ReverteuNesteCandle : Boolean;
   OrdemArmada : Boolean;
-  AlvoAtingidoNoDia : Boolean;
   FechamentoPorReversao : Boolean;
 
 begin
@@ -45,7 +44,6 @@ begin
     ResultadoPosicaoAberta := 0;
     ReverteuNesteCandle := false;
     OrdemArmada := false;
-    AlvoAtingidoNoDia := false;
     FechamentoPorReversao := false;
 
     CancelPendingOrders;
@@ -63,12 +61,6 @@ begin
 
   if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
   begin
-    if (PrecoAlvo <> 0) and (not FechamentoPorReversao) then
-    begin
-      AlvoAtingidoNoDia := true;
-      CancelPendingOrders;
-    end;
-
     PrecoAlvo := 0;
     FechamentoPorReversao := false;
   end;
@@ -83,7 +75,7 @@ begin
       PrecoAlvo := SellPrice - AlvoPontos;
   end;
 
-  if (not AlvoAtingidoNoDia) and (CurrentBar > 0) and (CurrentBar <> UltimoCandleProcessado) then
+  if (CurrentBar > 0) and (CurrentBar <> UltimoCandleProcessado) then
   begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
@@ -147,30 +139,23 @@ begin
     end;
   end;
 
-  if AlvoAtingidoNoDia then
+  if HasPosition and (PrecoAlvo <> 0) then
   begin
     CancelPendingOrders;
+
+    if IsBought then
+      SellShortLimit(PrecoAlvo, QuantidadeAtual)
+    else if IsSold then
+      BuyToCoverLimit(PrecoAlvo, QuantidadeAtual);
   end
-  else
+  else if OrdemArmada then
   begin
-    if HasPosition and (PrecoAlvo <> 0) then
-    begin
-      CancelPendingOrders;
+    CancelPendingOrders;
 
-      if IsBought then
-        SellShortLimit(PrecoAlvo, QuantidadeAtual)
-      else if IsSold then
-        BuyToCoverLimit(PrecoAlvo, QuantidadeAtual);
-    end
-    else if OrdemArmada then
-    begin
-      CancelPendingOrders;
-
-      if (DirecaoOrdem = 1) then
-        BuyStop(NivelDisparo, QuantidadeAtual)
-      else if (DirecaoOrdem = -1) then
-        SellShortStop(NivelDisparo, QuantidadeAtual);
-    end;
+    if (DirecaoOrdem = 1) then
+      BuyStop(NivelDisparo, QuantidadeAtual)
+    else if (DirecaoOrdem = -1) then
+      SellShortStop(NivelDisparo, QuantidadeAtual);
   end;
 
   PosicaoAnterior := PosicaoAtual;

@@ -20,4 +20,4 @@ Estratégias NTSL disponíveis:
 - se houver posição aberta e fechar um candle na direção oposta, a estratégia fecha a posição a mercado e arma nova entrada stop no extremo desse candle
 - se o fechamento por reversão ocorrer com prejuízo, a próxima entrada usa o dobro da quantidade atual, respeitando `MaxQuantidade`
 - a quantidade é resetada para `QuantidadeInicial` na virada da data
-- ao atingir o primeiro alvo do dia, interrompe novas operações até a virada da data
+- ao sair de uma operação, a estratégia volta a armar pela máxima ou mínima do candle recém-fechado
