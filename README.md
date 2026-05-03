@@ -2,6 +2,16 @@
 
 Estratégias NTSL disponíveis:
 
+## `breakout_candle_direcional.src`
+
+- estratégia mínima baseada apenas na direção do candle já fechado
+- se o candle anterior fechar positivo, arma `BuyStop` na máxima dele
+- se o candle anterior fechar negativo, arma `SellShortStop` na mínima dele
+- ao entrar comprado, mantém alvo por `SellShortLimit` em `BuyPrice + AlvoPontos`
+- ao entrar vendido, mantém alvo por `BuyToCoverLimit` em `SellPrice - AlvoPontos`
+- `AlvoPontos` e `Quantidade` são configuráveis por input
+- sem stop fixo, sem martingale e sem trava diária
+
 ## `estrategia_quatro_medias.src`
 
 - 4 médias aritméticas configuráveis por input
