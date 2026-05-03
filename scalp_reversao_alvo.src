@@ -140,7 +140,7 @@ begin
 
       if ReverteuNesteCandle and (ResultadoPosicaoAberta < 0) then
       begin
-        if ((QuantidadeAtual * 2) > MaxQuantidade) then
+        if (QuantidadeAtual * 2) > MaxQuantidade then
           QuantidadeAtual := MaxQuantidade
         else
           QuantidadeAtual := QuantidadeAtual * 2;
