@@ -12,6 +12,18 @@ Estratégias NTSL disponíveis:
 - `AlvoPontos` e `Quantidade` são configuráveis por input
 - sem stop fixo, sem martingale e sem trava diária
 
+## `scalp_abertura.src`
+
+- scalp das primeiras velas do dia (mini índice), explorando a volatilidade da abertura do pregão
+- analisa cada candle fechado a partir de `HoraInicioPregao` (padrão 9h00); se positivo, arma `BuyStop` na máxima; se negativo, arma `SellShortStop` na mínima
+- se a ordem não disparar no candle seguinte, é cancelada e rearmada com os extremos do novo candle
+- quando a ordem dispara, coloca alvo em `AlvoPontos` pontos via `SellShortLimit` / `BuyToCoverLimit`; ao atingir o alvo, para de operar no dia
+- se fechar um candle de direção oposta sem ter atingido o alvo, fecha a posição e arma nova entrada com o dobro da quantidade (virada de mão / martingale)
+- número de viradas permitidas limitado por `MaxViradas` (padrão 3); ao esgotar as viradas, encerra e não opera mais no dia
+- novos sinais de entrada são gerados apenas até `HoraFimSinais` (padrão 9h30), mas posições abertas continuam sendo gerenciadas após esse horário
+- `AlvoPontos`, `QuantidadeInicial`, `MaxViradas`, `HoraInicioPregao` e `HoraFimSinais` são configuráveis por input
+- todo o estado é resetado na virada do dia
+
 ## `estrategia_quatro_medias.src`
 
 - 4 médias aritméticas configuráveis por input

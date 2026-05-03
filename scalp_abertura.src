@@ -1,0 +1,194 @@
+Input
+  AlvoPontos(50);
+  QuantidadeInicial(1);
+  MaxViradas(3);
+  HoraInicioPregao(900);
+  HoraFimSinais(930);
+
+Var
+  DataReferencia    : Integer;
+  UltimoCandleProc  : Integer;
+  QuantidadeAtual   : Integer;
+  ViradasNoDia      : Integer;
+  NivelDisparo      : Float;
+  PrecoAlvo         : Float;
+  DirecaoOrdem      : Integer;
+  CandleDirecao     : Integer;
+  PosicaoAtual      : Integer;
+  PosicaoAnterior   : Integer;
+  AberturaCandle    : Float;
+  FechamentoCandle  : Float;
+  MaximaCandle      : Float;
+  MinimaCandle      : Float;
+  OrdemArmada       : Boolean;
+  FechamentoPorRev  : Boolean;
+  AlvoAtingidoNoDia : Boolean;
+  EncerradoNoDia    : Boolean;
+
+begin
+  // Reinicia estado no inicio de cada novo dia
+  if (Date <> DataReferencia) then
+  begin
+    DataReferencia    := Date;
+    UltimoCandleProc  := CurrentBar;
+    QuantidadeAtual   := QuantidadeInicial;
+    ViradasNoDia      := 0;
+    NivelDisparo      := 0;
+    PrecoAlvo         := 0;
+    DirecaoOrdem      := 0;
+    CandleDirecao     := 0;
+    PosicaoAnterior   := 0;
+    AberturaCandle    := 0;
+    FechamentoCandle  := 0;
+    MaximaCandle      := 0;
+    MinimaCandle      := 0;
+    OrdemArmada       := false;
+    FechamentoPorRev  := false;
+    AlvoAtingidoNoDia := false;
+    EncerradoNoDia    := false;
+
+    CancelPendingOrders;
+
+    if HasPosition then
+      ClosePosition;
+  end;
+
+  // Posicao atual do bar
+  PosicaoAtual := 0;
+  if IsBought then
+    PosicaoAtual := 1
+  else if IsSold then
+    PosicaoAtual := -1;
+
+  // Detecta fechamento de posicao (posicao anterior -> flat)
+  if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
+  begin
+    if (PrecoAlvo <> 0) and (not FechamentoPorRev) then
+    begin
+      // Alvo atingido: encerra operacoes no dia
+      AlvoAtingidoNoDia := true;
+      CancelPendingOrders;
+      OrdemArmada := false;
+    end;
+
+    PrecoAlvo    := 0;
+    FechamentoPorRev := false;
+  end;
+
+  // Detecta acionamento de ordem de entrada (flat -> posicionado)
+  if OrdemArmada and (PosicaoAnterior = 0) and (PosicaoAtual <> 0) then
+  begin
+    OrdemArmada := false;
+
+    if IsBought then
+      PrecoAlvo := BuyPrice + AlvoPontos
+    else if IsSold then
+      PrecoAlvo := SellPrice - AlvoPontos;
+  end;
+
+  // Processa novo candle fechado a partir do horario de inicio
+  if (CurrentBar > 1) and (CurrentBar <> UltimoCandleProc) and
+     (Time[1] >= HoraInicioPregao) then
+  begin
+    UltimoCandleProc := CurrentBar;
+    AberturaCandle   := Open[1];
+    FechamentoCandle := Close[1];
+    MaximaCandle     := High[1];
+    MinimaCandle     := Low[1];
+    CandleDirecao    := 0;
+
+    // Se flat, cancela ordem pendente (nao acionada no candle anterior)
+    if not HasPosition then
+    begin
+      CancelPendingOrders;
+      OrdemArmada := false;
+    end;
+
+    if (FechamentoCandle > AberturaCandle) then
+      CandleDirecao := 1
+    else if (FechamentoCandle < AberturaCandle) then
+      CandleDirecao := -1;
+
+    if (CandleDirecao <> 0) then
+    begin
+      // Comprado e candle negativo: reversao
+      if IsBought and (CandleDirecao = -1) then
+      begin
+        FechamentoPorRev := true;
+        ClosePosition;
+        PrecoAlvo := 0;
+
+        if ViradasNoDia < MaxViradas then
+        begin
+          ViradasNoDia    := ViradasNoDia + 1;
+          QuantidadeAtual := QuantidadeAtual * 2;
+          DirecaoOrdem    := -1;
+          NivelDisparo    := MinimaCandle;
+          OrdemArmada     := true;
+        end
+        else
+          EncerradoNoDia := true;
+      end
+      // Vendido e candle positivo: reversao
+      else if IsSold and (CandleDirecao = 1) then
+      begin
+        FechamentoPorRev := true;
+        ClosePosition;
+        PrecoAlvo := 0;
+
+        if ViradasNoDia < MaxViradas then
+        begin
+          ViradasNoDia    := ViradasNoDia + 1;
+          QuantidadeAtual := QuantidadeAtual * 2;
+          DirecaoOrdem    := 1;
+          NivelDisparo    := MaximaCandle;
+          OrdemArmada     := true;
+        end
+        else
+          EncerradoNoDia := true;
+      end;
+
+      // Novo sinal de entrada (flat, dentro da janela de sinais, operacoes permitidas)
+      if (PosicaoAtual = 0) and (not OrdemArmada) and
+         (not EncerradoNoDia) and (not AlvoAtingidoNoDia) and
+         (Time[1] < HoraFimSinais) then
+      begin
+        DirecaoOrdem := CandleDirecao;
+        PrecoAlvo    := 0;
+        OrdemArmada  := true;
+
+        if (CandleDirecao = 1) then
+          NivelDisparo := MaximaCandle
+        else
+          NivelDisparo := MinimaCandle;
+      end;
+    end;
+  end;
+
+  // Gerenciamento de ordens a cada bar
+  if AlvoAtingidoNoDia or EncerradoNoDia then
+  begin
+    CancelPendingOrders;
+    OrdemArmada := false;
+  end
+  else if HasPosition and (PrecoAlvo <> 0) then
+  begin
+    CancelPendingOrders;
+
+    if IsBought then
+      SellShortLimit(PrecoAlvo, QuantidadeAtual)
+    else if IsSold then
+      BuyToCoverLimit(PrecoAlvo, QuantidadeAtual);
+  end
+  else if OrdemArmada then
+  begin
+    CancelPendingOrders;
+
+    if (DirecaoOrdem = 1) then
+      BuyStop(NivelDisparo, QuantidadeAtual)
+    else if (DirecaoOrdem = -1) then
+      SellShortStop(NivelDisparo, QuantidadeAtual);
+  end;
+
+  PosicaoAnterior := PosicaoAtual;
+end;
