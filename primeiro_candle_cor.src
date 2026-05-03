@@ -1,23 +1,60 @@
 // primeiro_candle_cor.src
-// Indicador: pinta o primeiro candle do dia de verde (positivo) ou vermelho (negativo).
-// O primeiro candle e detectado quando a data do candle atual difere da data do candle anterior.
+// Estrategia: pinta o primeiro candle do dia e coloca ordem stop na sua extremidade.
+// Candle de alta  -> BuyStop na maxima.
+// Candle de baixa -> SellShortStop na minima.
+
+Input
+  Quantidade(1);
 
 Var
-  prevDate : Integer;
-  cOpen    : Float;
-  cClose   : Float;
+  // Posicionais: sempre no topo, nunca em escopos condicionais
+  cOpen  : Float;
+  cClose : Float;
+  cHigh  : Float;
+  cLow   : Float;
+
+  diaRef  : Integer;
+  dirDia  : Integer;   // 0=aguardando  1=compra  -1=venda
+  nivStop : Float;
 
 begin
-  prevDate := Date[1];
-  cOpen    := Open;
-  cClose   := Close;
+  cOpen  := Open;
+  cClose := Close;
+  cHigh  := High;
+  cLow   := Low;
 
-  if Date <> prevDate then
+  // Reset diario e deteccao do primeiro candle
+  if Date <> diaRef then
   begin
+    diaRef  := Date;
+    dirDia  := 0;
+    nivStop := 0;
+    CancelPendingOrders;
+
     if cClose > cOpen then
-      PaintBar(clGreen)
+    begin
+      PaintBar(clGreen);
+      dirDia  := 1;
+      nivStop := cHigh;
+    end
     else if cClose < cOpen then
+    begin
       PaintBar(clRed);
+      dirDia  := -1;
+      nivStop := cLow;
+    end;
+  end;
+
+  // Gestao de ordens: cancel + resubmit a cada tick (padrao NTSL)
+  if dirDia = 1 then
+  begin
+    CancelPendingOrders;
+    BuyStop(nivStop, Quantidade);
+  end
+  else if dirDia = -1 then
+  begin
+    CancelPendingOrders;
+    SellShortStop(nivStop, Quantidade);
   end;
 
 end;
