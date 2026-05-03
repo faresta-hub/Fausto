@@ -20,12 +20,16 @@ Var
   FechamentoCandle  : Float;
   MaximaCandle      : Float;
   MinimaCandle      : Float;
+  HoraCandle        : Integer;
   OrdemArmada       : Boolean;
   FechamentoPorRev  : Boolean;
   AlvoAtingidoNoDia : Boolean;
   EncerradoNoDia    : Boolean;
 
 begin
+  // Captura posicional antecipada (fora de qualquer condicional)
+  HoraCandle := Time[1];
+
   // Reinicia estado no inicio de cada novo dia
   if (Date <> DataReferencia) then
   begin
@@ -88,7 +92,7 @@ begin
 
   // Processa novo candle fechado a partir do horario de inicio
   if (CurrentBar > 1) and (CurrentBar <> UltimoCandleProc) and
-     (Time[1] >= HoraInicioPregao) then
+     (HoraCandle >= HoraInicioPregao) then
   begin
     UltimoCandleProc := CurrentBar;
     AberturaCandle   := Open[1];
@@ -151,7 +155,7 @@ begin
       // Novo sinal de entrada (flat, dentro da janela de sinais, operacoes permitidas)
       if (PosicaoAtual = 0) and (not OrdemArmada) and
          (not EncerradoNoDia) and (not AlvoAtingidoNoDia) and
-         (Time[1] < HoraFimSinais) then
+         (HoraCandle < HoraFimSinais) then
       begin
         DirecaoOrdem := CandleDirecao;
         PrecoAlvo    := 0;
