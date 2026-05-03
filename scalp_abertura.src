@@ -28,7 +28,11 @@ Var
 
 begin
   // Captura posicional antecipada (fora de qualquer condicional)
-  HoraCandle := Time[1];
+  HoraCandle       := Time[1];
+  AberturaCandle   := Open[1];
+  FechamentoCandle := Close[1];
+  MaximaCandle     := High[1];
+  MinimaCandle     := Low[1];
 
   // Reinicia estado no inicio de cada novo dia
   if (Date <> DataReferencia) then
@@ -95,10 +99,6 @@ begin
      (HoraCandle >= HoraInicioPregao) then
   begin
     UltimoCandleProc := CurrentBar;
-    AberturaCandle   := Open[1];
-    FechamentoCandle := Close[1];
-    MaximaCandle     := High[1];
-    MinimaCandle     := Low[1];
     CandleDirecao    := 0;
 
     // Se flat, cancela ordem pendente (nao acionada no candle anterior)
