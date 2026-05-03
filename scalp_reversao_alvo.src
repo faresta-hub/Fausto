@@ -17,7 +17,12 @@ Var
   ResultadoPosicaoAberta : Float;
   ReverteuNesteCandle : Boolean;
   OrdemArmada : Boolean;
+  AlvoAtingidoNoDia : Boolean;
   FechamentoPorReversao : Boolean;
+  AberturaCandle : Float;
+  FechamentoCandle : Float;
+  MaximaCandle : Float;
+  MinimaCandle : Float;
 
 begin
   PosicaoAtualInicial := 0;
@@ -30,7 +35,7 @@ begin
   if (Date <> DataReferencia) then
   begin
     DataReferencia := Date;
-    UltimoCandleProcessado := CurrentBar - 1;
+    UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
     
     if (QuantidadeInicial > MaxQuantidade) then
@@ -44,7 +49,12 @@ begin
     ResultadoPosicaoAberta := 0;
     ReverteuNesteCandle := false;
     OrdemArmada := false;
+    AlvoAtingidoNoDia := false;
     FechamentoPorReversao := false;
+    AberturaCandle := 0;
+    FechamentoCandle := 0;
+    MaximaCandle := 0;
+    MinimaCandle := 0;
 
     CancelPendingOrders;
 
@@ -61,6 +71,13 @@ begin
 
   if (PosicaoAnterior <> 0) and (PosicaoAtual = 0) then
   begin
+    if (PrecoAlvo <> 0) and (not FechamentoPorReversao) then
+    begin
+      AlvoAtingidoNoDia := true;
+      CancelPendingOrders;
+      OrdemArmada := false;
+    end;
+
     PrecoAlvo := 0;
     FechamentoPorReversao := false;
   end;
@@ -75,11 +92,15 @@ begin
       PrecoAlvo := SellPrice - AlvoPontos;
   end;
 
-  if (CurrentBar > 0) and (CurrentBar <> UltimoCandleProcessado) then
+  if (not AlvoAtingidoNoDia) and (CurrentBar > 1) and (CurrentBar <> UltimoCandleProcessado) then
   begin
     UltimoCandleProcessado := CurrentBar;
     CandleDirecao := 0;
     ReverteuNesteCandle := false;
+    AberturaCandle := Open[1];
+    FechamentoCandle := Close[1];
+    MaximaCandle := High[1];
+    MinimaCandle := Low[1];
 
     if not HasPosition then
     begin
@@ -87,9 +108,9 @@ begin
       OrdemArmada := false;
     end;
 
-    if (Close > Open) then
+    if (FechamentoCandle > AberturaCandle) then
       CandleDirecao := 1
-    else if (Close < Open) then
+    else if (FechamentoCandle < AberturaCandle) then
       CandleDirecao := -1;
 
     if (CandleDirecao <> 0) then
@@ -102,7 +123,7 @@ begin
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := -1;
-        NivelDisparo := Low;
+        NivelDisparo := MinimaCandle;
         OrdemArmada := true;
       end
       else if IsSold and (CandleDirecao = 1) then
@@ -113,13 +134,13 @@ begin
         ClosePosition;
         PrecoAlvo := 0;
         DirecaoOrdem := 1;
-        NivelDisparo := High;
+        NivelDisparo := MaximaCandle;
         OrdemArmada := true;
       end;
 
       if ReverteuNesteCandle and (ResultadoPosicaoAberta < 0) then
       begin
-        if (QuantidadeAtual > (MaxQuantidade / 2)) then
+        if ((QuantidadeAtual * 2) > MaxQuantidade) then
           QuantidadeAtual := MaxQuantidade
         else
           QuantidadeAtual := QuantidadeAtual * 2;
@@ -132,14 +153,19 @@ begin
         OrdemArmada := true;
 
         if (CandleDirecao = 1) then
-          NivelDisparo := High
+          NivelDisparo := MaximaCandle
         else
-          NivelDisparo := Low;
+          NivelDisparo := MinimaCandle;
       end;
     end;
   end;
 
-  if HasPosition and (PrecoAlvo <> 0) then
+  if AlvoAtingidoNoDia then
+  begin
+    CancelPendingOrders;
+    OrdemArmada := false;
+  end
+  else if HasPosition and (PrecoAlvo <> 0) then
   begin
     CancelPendingOrders;
 
