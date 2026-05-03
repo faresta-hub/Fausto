@@ -1,10 +1,12 @@
 // primeiro_candle_cor.src
 // Estrategia: pinta o primeiro candle do dia e coloca ordem stop na sua extremidade.
-// Candle de alta  -> BuyStop na maxima.
-// Candle de baixa -> SellShortStop na minima.
+// Candle de alta  -> BuyStop na maxima; alvo e stop configuráveis.
+// Candle de baixa -> SellShortStop na minima; alvo e stop configuráveis.
 
 Input
   Quantidade(1);
+  Alvo(50);       // pontos de alvo (gain)
+  StopLoss(500);  // pontos de stop (loss)
 
 Var
   // Posicionais: sempre no topo, nunca em escopos condicionais
@@ -13,9 +15,11 @@ Var
   cHigh  : Float;
   cLow   : Float;
 
-  diaRef  : Integer;
-  dirDia  : Integer;   // 0=aguardando  1=compra  -1=venda
-  nivStop : Float;
+  diaRef   : Integer;
+  dirDia   : Integer;   // 0=aguardando  1=compra  -1=venda
+  nivStop  : Float;     // nivel de entrada (stop de entrada)
+  nivAlvo  : Float;     // nivel de alvo (saida gain)
+  nivPerda : Float;     // nivel de stop (saida loss)
 
 begin
   cOpen  := Open;
@@ -26,22 +30,28 @@ begin
   // Reset diario e deteccao do primeiro candle
   if Date <> diaRef then
   begin
-    diaRef  := Date;
-    dirDia  := 0;
-    nivStop := 0;
+    diaRef   := Date;
+    dirDia   := 0;
+    nivStop  := 0;
+    nivAlvo  := 0;
+    nivPerda := 0;
     CancelPendingOrders;
 
     if cClose > cOpen then
     begin
       PaintBar(clGreen);
-      dirDia  := 1;
-      nivStop := cHigh;
+      dirDia   := 1;
+      nivStop  := cHigh;
+      nivAlvo  := cHigh + Alvo;
+      nivPerda := cHigh - StopLoss;
     end
     else if cClose < cOpen then
     begin
       PaintBar(clRed);
-      dirDia  := -1;
-      nivStop := cLow;
+      dirDia   := -1;
+      nivStop  := cLow;
+      nivAlvo  := cLow - Alvo;
+      nivPerda := cLow + StopLoss;
     end;
   end;
 
@@ -49,12 +59,24 @@ begin
   if dirDia = 1 then
   begin
     CancelPendingOrders;
-    BuyStop(nivStop, Quantidade);
+    if IsBought then
+    begin
+      SellShortLimit(nivAlvo,  Quantidade);
+      Sell(nivPerda, Quantidade);
+    end
+    else
+      BuyStop(nivStop, Quantidade);
   end
   else if dirDia = -1 then
   begin
     CancelPendingOrders;
-    SellShortStop(nivStop, Quantidade);
+    if IsSold then
+    begin
+      BuyLimit(nivAlvo,  Quantidade);
+      BuyStop(nivPerda,  Quantidade);
+    end
+    else
+      SellShortStop(nivStop, Quantidade);
   end;
 
 end;
