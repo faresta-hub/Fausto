@@ -1,30 +1,19 @@
 // primeiro_candle_cor.src
 // Indicador: pinta o primeiro candle do dia de verde (positivo) ou vermelho (negativo).
-
-Input
-  HoraInicio(900);
+// O primeiro candle e detectado quando a data do candle atual difere da data do candle anterior.
 
 Var
-  cOpen  : Float;
-  cClose : Float;
-  cTime  : Integer;
-  diaRef : Integer;
-  pintou : Boolean;
+  prevDate : Integer;
+  cOpen    : Float;
+  cClose   : Float;
 
 begin
-  cOpen  := Open[1];
-  cClose := Close[1];
-  cTime  := Time[1];
+  prevDate := Date[1];
+  cOpen    := Open;
+  cClose   := Close;
 
-  if Date <> diaRef then
+  if Date <> prevDate then
   begin
-    diaRef := Date;
-    pintou := false;
-  end;
-
-  if (not pintou) and (cTime = HoraInicio) then
-  begin
-    pintou := true;
     if cClose > cOpen then
       PaintBar(clGreen)
     else if cClose < cOpen then
